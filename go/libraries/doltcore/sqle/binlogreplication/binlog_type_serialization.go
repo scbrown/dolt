@@ -871,7 +871,7 @@ func encodeBytesFromAddress(ctx *sql.Context, addr hash.Hash, ns tree.NodeStore,
 	}
 	bytes, err := ns.ReadBytes(ctx, addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("binlog serialization: failed to read out-of-band data at address %s for type %s: %w", addr.String(), typ.String(), err)
 	}
 
 	blobType := typ.(sql.StringType)
