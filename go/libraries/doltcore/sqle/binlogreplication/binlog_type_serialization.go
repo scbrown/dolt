@@ -866,6 +866,19 @@ func encodeBytes(data []byte, typ sql.Type) ([]byte, error) {
 // in the returned |data| slice. The |typ| parameter is used to determine the maximum byte length of the serialized
 // type, in order to determine how many bytes to use for the length prefix.
 func encodeBytesFromAddress(ctx *sql.Context, addr hash.Hash, ns tree.NodeStore, typ sql.Type) (data []byte, err error) {
+	if addr.IsEmpty() {
+		// Empty TEXT/BLOB column — the tuple stores a zero hash (no out-of-band data).
+		// Serialize as a zero-length value instead of attempting a ChunkStore lookup.
+		blobType := typ.(sql.StringType)
+		if blobType.MaxByteLength() > 0xFFFFFF {
+			return []byte{0, 0, 0, 0}, nil
+		} else if blobType.MaxByteLength() > 0xFFFF {
+			return []byte{0, 0, 0}, nil
+		} else if blobType.MaxByteLength() > 0xFF {
+			return []byte{0, 0}, nil
+		}
+		return []byte{0}, nil
+	}
 	if ns == nil {
 		return nil, fmt.Errorf("nil NodeStore used to encode bytes from address")
 	}
